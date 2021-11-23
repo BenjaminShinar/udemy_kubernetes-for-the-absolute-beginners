@@ -1,0 +1,84 @@
+#coding exercises 1 - 6
+---
+# exercise 1
+Fruit: Apple
+Drink: Water
+Dessert: Cake
+Vegetable: Carrot
+
+---
+# exercise 2
+Fruits:
+  - Apple
+  - Banana
+  - Orange
+Vegetables:
+  - Carrot
+  - Tomato
+  - Cucumber
+
+---
+# exercise 3
+
+Fruits:
+  - Apple:
+        Calories: 95
+        Fat: 0.3
+        Carbs: 25
+  - Banana:
+      Calories: 105
+      Fat: 0.4
+      Carbs: 27
+  - Orange:
+        Calories: 45
+        Fat: 0.1
+        Carbs: 11
+Vegetables:
+  - Carrot:
+      Calories: 25
+      Fat: 0.1
+      Carbs: 6
+  - Tomato:
+      Calories: 22
+      Fat: 0.2
+      Carbs: 4.8
+  - Cucumber:
+      Calories: 8
+      Fat: 0.1
+      Carbs: 1.9
+---
+# exercise 4
+Employee:
+  name: Jacob
+  sex: Male
+  age: 30
+  title: Systems Engineer
+
+---
+# exercise 5
+Employee:
+  name: Jacob
+  sex: Male
+  age: 30
+  title: Systems Engineer
+  projects:
+    - Automation
+    - Support
+
+---
+# exercise 6
+Employee:
+  name: Jacob
+  sex: Male
+  age: 30
+  title: Systems Engineer
+  projects:
+    - Automation
+    - Support
+  Payslips:
+    - month: June
+      Wage: 4000
+    - month: July
+      Wage: 4500
+    - month: August
+      Wage: 4000

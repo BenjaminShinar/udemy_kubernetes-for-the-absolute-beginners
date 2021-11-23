@@ -1,0 +1,88 @@
+
+#coding exercises 7 - 15
+---
+# exercise 7
+apiVersion:
+kind:
+metadata:
+spec:
+---
+# exercise 8
+apiVersion: v1
+kind:
+metadata:
+spec:
+---
+# exercise 9
+apiVersion: v1
+kind: Pod
+metadata:
+spec:
+---
+# exercise 10
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+---
+# exercise 11
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+---
+# exercise 12
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+---
+# exercise 13
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  -
+    name: nginx
+    image: nginx
+---
+# exercise 14
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres
+  labels:
+    tier: db-tier
+spec:
+  containers:
+  -
+    name: postgres
+    image: postgres
+---
+# exercise 15
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres
+  labels:
+    tier: db-tier
+spec:
+  containers:
+    - name: postgres
+      image: postgres
+      env:
+        - 
+          name: POSTGRES_PASSWORD
+          value: mysecretpassword
