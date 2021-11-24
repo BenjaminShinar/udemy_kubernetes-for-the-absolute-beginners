@@ -1,0 +1,93 @@
+#coding exercises 16-22
+---
+# exercise 16
+apiVersion:
+kind:
+metadata:
+spec:
+---
+# exercise 17
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+spec:
+---
+# exercise 18
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+    name: frontend
+    labels:
+        app: mywebsite
+        tier: frontend
+spec:
+---
+# exercise 19
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+    replicas:
+    template:
+    selector:
+---
+# exercise 20
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+  replicas: 4
+  template:
+  selector:
+---
+# exercise 21
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+  replicas: 4
+  template:
+    metadata:
+        name: myapp-pod
+        labels:
+            app: myapp
+    spec:
+        containers:
+            - name: nginx
+              image: nginx
+  selector:
+---
+# exercise 22
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+  replicas: 4
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+  selector:
+    matchLabels:
+        app: myapp

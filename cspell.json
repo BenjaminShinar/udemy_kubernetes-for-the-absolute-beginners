@@ -8,6 +8,10 @@
         "Kubernetes",
         "minikube"
     ],
-    "ignoreWords": [],
+    "ignoreWords": [
+        "myapp",
+        "mysecretpassword",
+        "mywebsite"
+    ],
     "import": []
 }

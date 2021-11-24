@@ -15,11 +15,18 @@ TOC
   - [Kubernetes Concepts](#kubernetes-concepts)
   - [YAML Introduction](#yaml-introduction)
   - [Kubernetes Concepts - PODs, ReplicaSets, Deployments](#kubernetes-concepts---pods-replicasets-deployments)
-    - [Pods](#pods)
       - [lab access with kodekloud](#lab-access-with-kodekloud)
+    - [Pods](#pods)
+      - [Lab - pods and yaml](#lab---pods-and-yaml)
     - [Kubernetes Controllers: ReplicaSet](#kubernetes-controllers-replicaset)
+      - [Lab - Replica Set](#lab---replica-set)
+    - [Deployments](#deployments)
+      - [Lab - Deployment](#lab---deployment)
+      - [Deployment update and rollback](#deployment-update-and-rollback)
+      - [Lab - Rollout and Updates](#lab---rollout-and-updates)
   - [Networking in Kubernetes](#networking-in-kubernetes)
   - [Services](#services)
+      - [Lab - Services](#lab---services)
   - [Microservices Architecture](#microservices-architecture)
   - [Kubernetes on Cloud](#kubernetes-on-cloud)
   - [Setup Multi Node Cluster Using Kubeadm](#setup-multi-node-cluster-using-kubeadm)
@@ -183,10 +190,21 @@ now we can look at the coding exercises (1-6).
 
 ## Kubernetes Concepts - PODs, ReplicaSets, Deployments
 
-<!-- <details> -->
+<details>
 <summary>
-Yaml files for kubernetes resources.
+Yaml files for kubernetes resources: pods, replicaSet and Deployments
 </summary>
+
+#### lab access with kodekloud
+
+create a kodeKloud account, use the coupon, and start 
+
+lab getting familiarized:
+```sh
+kubectl get nodes
+kubectl version
+kubectl get nodes -o wide
+```
 
 
 ### Pods
@@ -204,9 +222,9 @@ lets create a pod resource, we name the file "pod-definition.yaml"
 apiVersion: v1
 kind: Pod
 metadata:
-  name: myApp-pod
+  name: myapp-pod
   labels:
-    app: myApp
+    app: myapp
     #tier: frontend
 spec:
   containers:
@@ -219,25 +237,15 @@ we can now use **kubectl** to create the pod and get data about it.
 ```sh
 kubectl create -f pod-definition.yaml
 kubectl get pods
-kubectl describe pod myApp-pod
+kubectl describe pod myapp-pod
 ```
 
 rather than use a regular text editor, we can use an IDE that has support for yaml files, and use a extension to get hints about kubernetes format. we get some validations for formats and required fields.
 
 
 
-#### lab access with kodekloud
+#### Lab - pods and yaml
 
-create a kodeKloud account, use the coupon, and start 
-
-lab getting familiarized:
-```sh
-kubectl get nodes
-kubectl version
-kubectl get nodes -o wide
-```
-
-lab pods and yaml:
 ```sh
 kubectl get pods
 kubectl run nginx --image=nginx
@@ -271,16 +279,16 @@ let's look at the yaml for a replication Controller, in the *template* we can si
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: myApp-rc
+  name: myapp-rc
   labels:
-    app: myApp
+    app: myapp
     type: front-end
 spec:
   template:
     metadata:
-      name: myApp-pod
+      name: myapp-pod
       labels:
-        app: myApp
+        app: myapp
         type: front-end
     spec:
       containers:
@@ -302,16 +310,16 @@ but if we want a replicaSet (which we want), we need a different yaml file. now 
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  name: myApp-replicaSet
+  name: myapp-replicaSet
   labels:
-    app: myApp
+    app: myapp
     type: front-end
 spec:
   template:
     metadata:
-      name: myApp-pod
+      name: myapp-pod
       labels:
-        app: myApp
+        app: myapp
         type: front-end
     spec:
       containers:
@@ -329,7 +337,7 @@ if we want to scale the replicaSet, we can change the number in the yaml and run
 ```sh
 kubectl replace -f replicaSet-definition.yaml
 kubectl scale --replicas=6 -f replicaSet-definition.yaml
-kubectl scale --replicas=6 replicaset myApp-replicaset
+kubectl scale --replicas=6 replicaset myapp-replicaset
 ```
 
 other commands
@@ -342,16 +350,167 @@ kubectl describe
 kubectl edit
 ```
 
+#### Lab - Replica Set
+
+```sh
+kubectl get pods
+kubectl get replicaset
+kubectl describe replicaset new-replica-set
+kubectl describe pod new-replica-set-<pod-name>
+kubectl delete pod new-replica-set-<pod-name>
+kubectl create -f replicaset-definition-1.yaml
+# edit, change key from v1 to apps/v1
+kubectl create -f replicaset-definition-1.yaml
+
+kubectl create -f replicaset-definition-2.yaml --dry-run=server
+# edit, change selector to match labels
+kubectl create -f replicaset-definition-2.yaml
+
+kubectl delete replicaset replicaset-1
+kubectl delete -f replicaset-definition-2.yaml
+
+kubectl edit replicaset new-replica-set
+kubectl delete pod -l name=busybox-pod
+kubectl scale --replicas=5 rs/new-replica-set
+kubectl scale --replicas=2 rs/new-replica-set
+```
+
+### Deployments
+
+deploying a cluster in an environment. upgrading (rolling upgrade), roll backs, applying changes at once.
+- pods - single instances
+- replicaSet - multiple pods
+- deployment - higher level
 
 
+a deployment creates a replicaSet, which in turn creates(or controls) pods. but it has additional functionalities.
+
+deployment-definition.yaml
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deployment
+  labels:
+    app: myapp
+    type: front-end
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      type: front-end
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+        type: front-end
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx
+
+```
+we can create it and see how everything was created
+```sh
+kubectl create -f deployment-definition.yaml
+kubectl get deployment
+kubectl get replicaset
+kubectl get pods
+#kubectl get deployments, replicasets, pods
+#kubectl get all
+```
+
+
+#### Lab - Deployment
+
+```sh
+kubectl get pods
+kubectl get replicaset
+kubectl get deployment
+
+kubectl describe deployment frontend-deployment
+kubectl describe pod frontend-deployment-<pod-name>
+
+#didn't work, because of the "kind"
+kubectl create -f deployment-definition-1.yaml --dry-run=server
+#change file, bad case in "kind: deployment"
+kubectl create -f deployment-definition-1.yaml
+
+
+# get basic form
+kubectl create deployment httpd-frontend --image httpd:2.4-alpine -o yaml --dry-run=client > my_deployment.yaml
+vi my_deployment.yaml
+kubectl create -f my_deployment.yaml
+```
+
+#### Deployment update and rollback
+
+rollout an versioning, each rollout creates a revision to the deployment, we can see the current status, or see the history.
+
+```sh
+kubectl rollout status deployment/myapp-deployment
+kubectl rollout history deployment myapp-deployment
+```
+
+when we upgrade the version, we can take down all the pods and then create the pods with the new versions. this is called the **recreate** strategy, and it's not great because it creates a downtime period in which no pods are running. a better idea is a **rolling update** strategy, that removes a pod and creates a pod one by one.
+
+
+if we make a change to a deployment file, we can trigger an update with `kubectl apply`. if we simply want to change the image, we an use a `set` command (which will also trigger a rollout), but this will mean our file isn't relevant anymore.
+
+```sh
+kubectl apply -f deployment-definition.yaml 
+kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1
+```
+
+when we use different update strategies, we can use `kubectl describe` to see the process of replacing the pods.
+
+if we want to rollback the deployment to a earlier version, we can `undo` the rollout.
+
+```sh
+kubectl rollout undo deployment myapp-deployment
+```
+
+when we create or edit a deployment, we can add the *--record* flag. that will add the command to the annotations which we can see when we `describe` the resource. 
+
+
+#### Lab - Rollout and Updates
+
+```sh
+kubectl get pods,service
+./curl-test.sh
+kubectl get pods
+kubectl describe deployment/frontend
+kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2
+./curl-test.sh
+
+kubectl edit deployment/frontend
+kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v3
+./curl-test.sh
+
+kubectl rollout status deployment frontend
+
+```
 </details>
 
 ## Networking in Kubernetes
 
-<!-- <details> -->
+<details>
 <summary>
-
+Networking basics.
 </summary>
+
+basics of networking. a node has an ip address (or the minikube vm has this address). with a single-node, single pod,  each pod gets an ip address (unlike docker, where each container gets an ip). the kubernetes configures a private network for the pods inside it, this means pods can talk to one another, this can be done via ip addresses, but it's not a good idea (ips can change).
+
+if we have multiple nodes, each node has a different ip address, but we need to configure the networking so that pods won't have the same ips (even if they don't share the same network because the are in different nodes)
+
+we need to see up the networking to meet the requirements:
+> - All containers/POds can communicate to one another without NAT.
+> - All nodes can communicate with all containers and vice-versa without NAT.
+
+there are pre-build solutions that do this for us (such as flannel, cilium, nsx), this depends on the platform in which we. a virtual network is created and uses routing to control communications.
+
+
 </details>
 
 ## Services
@@ -360,6 +519,12 @@ kubectl edit
 <summary>
 
 </summary>
+
+#### Lab - Services
+
+```sh
+
+```
 </details>
 
 ## Microservices Architecture

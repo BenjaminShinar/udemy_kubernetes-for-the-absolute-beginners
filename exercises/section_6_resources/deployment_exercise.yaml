@@ -1,0 +1,72 @@
+#coding exercises 23-29
+---
+# exercise 23
+apiVersion:
+kind:
+metadata:
+spec:
+---
+# exercise 24
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+spec:
+---
+# exercise 25
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: frontend
+    labels:
+        app: mywebsite
+        tier: frontend
+spec:
+---
+# exercise 26
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+    replicas:
+    selector:
+    template:
+---
+# exercise 27
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+  replicas: 4
+  template:
+  selector:
+---
+# exercise 28
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+  replicas: 4
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+  selector:
+---
+# exercise 29
