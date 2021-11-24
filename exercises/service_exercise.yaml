@@ -1,0 +1,92 @@
+#coding exercises 30-37
+---
+# exercise 30
+apiVersion:
+kind:
+metadata:
+spec:
+---
+# exercise 31
+apiVersion: v1
+kind: Service
+metadata:
+spec:
+---
+# exercise 32
+apiVersion: v1
+kind: Service
+metadata:
+    name: frontend
+    labels:
+        app: myapp
+spec:
+---
+# exercise 33
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    app: myapp
+spec:
+    type:
+    ports:
+    selector:
+---
+# exercise 34
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    app: myapp
+spec:
+  type:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+---
+# exercise 35
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    app: myapp
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+---
+# exercise 36
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    app: myapp
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: myapp
+---
+# exercise 37
+apiVersion: v1
+kind: Service
+metadata:
+    name: image-processing
+    labels:
+        app: myapp
+spec:
+    type: ClusterIP
+    ports:
+    - port: 80
+      targetPort: 8080
+    selector:
+        tier: backend

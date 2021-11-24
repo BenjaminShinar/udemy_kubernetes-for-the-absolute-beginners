@@ -515,15 +515,102 @@ there are pre-build solutions that do this for us (such as flannel, cilium, nsx)
 
 ## Services
 
-<!-- <details> -->
+<details>
 <summary>
-
+Kubernetes Services for networking
 </summary>
 
+services allow communication between components in the cluster, between each other and communication from the outside world. we can connect the frontend, backend and the database, therefore achieving decoupling.
+
+
+the nodes control the network in which the pods exist in, and we want to expose the pods to the outside without requiring an ssh.
+
+kubernetes services are a type of resource, just like deployments and pods.
+
+types:
+- ClusterIP
+- NodePort
+- LoadBalancer
+
+we will look in detail at the NodePort service:
+1. targetPort
+2. port
+3. clusterIp of the service
+4. NodePort (external access)
+
+node ports are usually between the range of 30000-32767. we have to provide the targetPort, if we don't specify, the port will be the same as the targetPort, and the nodePort will be assigned.
+
+to assign the service to a certain pod, we use the *selector* to match the pods from the deployment/replicaset/pod definition file.
+
+service-definition.yaml
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name:  myapp-service
+spec:
+  type: NodePort
+  ports:
+  - targetPort: 80
+    port: 80
+    nodePort: 30008
+  selector:
+    app: myapp
+    type: front-end
+```
+
+ClusterIP:
+
+when we want communication between different pods. like between backend and frontend, and between the backend and the database.
+
+service-definition-cluster.yaml
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name:  back-end
+spec:
+  type: clusterIP
+  ports:
+  - targetPort: 80
+    port: 80
+  selector:
+    app: myapp
+    type: back-end
+```
+
+
+Load Balancer:
+
+another type of service, but this time using a load balancing. gives us a single url for the end user, and integrates with the cloud provider to use whatever load balancer it has. if there ins't a load balancer, it will be just like NodePort type
+
+service-definition-load-balancer.yaml
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name:  myapp-service
+spec:
+  type: LoadBalancer
+  ports:
+  - targetPort: 80
+    port: 80
+  selector:
+    app: myapp
+    type: front-end
+```
 #### Lab - Services
 
 ```sh
+kubectl get services -A
+kubectl describe service kubernetes
 
+kubectl get deployments -A
+kubectl describe deployment/simple-webapp-deployment
+#kubectl describe deployment/simple-webapp-deployment | grep -i image
+
+vi service-definition-1.yaml
+kubectl apply -f service-definition-1.yaml 
 ```
 </details>
 
@@ -531,8 +618,34 @@ there are pre-build solutions that do this for us (such as flannel, cilium, nsx)
 
 <!-- <details> -->
 <summary>
-
+Understanding microservices architecture
 </summary>
+
+we will use the Docker voting app, it has an interface to vote, to show the results, backend and database.
+
+voting app -> in-memory DB (redis) -> worker -> db (postgresSQL) -> results app
+
+
+running these commands simply don't work. docker-compose would be better
+```sh
+docker container run -d --rm --name=redis redis
+docker container run -d --rm --name=db postgres:9.4
+docker container run -d --rm --name=vote -p 5000:80 voting-app
+docker container run -d --rm --name=result -p 5001:80 results-app
+docker container run -d --rm --name=worker worker
+```
+we need to link them together with the *--link* flag. we match the host and the service name.
+
+```sh
+docker container run -d --rm --name=redis redis
+docker container run -d --rm --name=db postgres:9.4
+docker container run -d --rm --name=vote --link redis:redis -p 5000:80 voting-app
+docker container run -d --rm --name=result --link db:db -p 5001:80 results-app
+docker container run -d --rm --name=worker --link db:db --link redis:redis worker
+```
+
+but this is tedious. lets be smarter.
+
 </details>
 
 ## Kubernetes on Cloud
