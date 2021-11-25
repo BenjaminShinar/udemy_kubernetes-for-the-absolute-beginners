@@ -4,9 +4,13 @@
     "dictionaryDefinitions": [],
     "dictionaries": [],
     "words": [
+        "examplevotingapp",
+        "kodekloud",
+        "kubeconfig",
         "kubelet",
         "Kubernetes",
-        "minikube"
+        "minikube",
+        "mkdir"
     ],
     "ignoreWords": [
         "myapp",

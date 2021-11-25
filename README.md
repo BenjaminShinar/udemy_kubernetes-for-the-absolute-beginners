@@ -1,6 +1,6 @@
 <!--
 ignore these words in spell check for this file
-// cSpell:ignore udemy Microservices Kubeadm replicaset replicasets Mesos kubectl kodeKloud katakoda systeminfo virtualbox vmwarefusion hyperv vmware podman
+// cSpell:ignore udemy Microservices Kubeadm replicaset replicasets Mesos kubectl katakoda systeminfo virtualbox vmwarefusion hyperv vmware podman kops kube gcloud Vagrantile kubemaster kubenode netfilter nodeprobe keyrings
 -->
 
 # Kubernetes for the Absolute Beginners - Hands-on
@@ -29,8 +29,10 @@ TOC
       - [Lab - Services](#lab---services)
   - [Microservices Architecture](#microservices-architecture)
   - [Kubernetes on Cloud](#kubernetes-on-cloud)
+    - [Google Kubernetes Engine (GKE)](#google-kubernetes-engine-gke)
+    - [Amazon Elastic Kubernetes Service (EKS)](#amazon-elastic-kubernetes-service-eks)
+    - [Azure Kubernetes Service (AKS)](#azure-kubernetes-service-aks)
   - [Setup Multi Node Cluster Using Kubeadm](#setup-multi-node-cluster-using-kubeadm)
-  - [Extra Takeaways](#extra-takeaways)
 
 
 
@@ -616,9 +618,9 @@ kubectl apply -f service-definition-1.yaml
 
 ## Microservices Architecture
 
-<!-- <details> -->
+<details>
 <summary>
-Understanding microservices architecture
+Understanding microservices architecture and creating a multi-pod application.
 </summary>
 
 we will use the Docker voting app, it has an interface to vote, to show the results, backend and database.
@@ -646,29 +648,396 @@ docker container run -d --rm --name=worker --link db:db --link redis:redis worke
 
 but this is tedious. lets be smarter.
 
+
+> our goals:
+> 1. deploy containers on kubernetes cluster
+> 2. enable connectivity between containers
+> 3. enable external access
+
+we don't have containers directly in kubernetes, we have pods. we will start with deploying pods and then move up to deployments. for connectivity, we need to think about who talks to who:
+- external -> voting app - redis
+- worker app -> redis
+- worker app -> postgres
+- external -> results app -> postgres
+
+the worker app isn't being accessed by any other app or user.
+
+app| name | port/targetPost | nodePort | image
+----|---|-----|---|----
+voting app |voting-app-pod | 80 | 30004|[kodekloud/examplevotingapp_vote:v1](https://hub.docker.com/r/kodekloud/examplevotingapp_vote)
+result app | result-app-pod| 80| 300005|[kodekloud/examplevotingapp_result:v1](https://hub.docker.com/r/kodekloud/examplevotingapp_result)
+redis | redis|6379|NA|[redis](https://hub.docker.com/_/redis)
+postgres | db| 5432 | NA|[postgressql](https://hub.docker.com/_/postgres)
+worker | worker-pod | NA |NA | [kodekloud/examplevotingapp_worker:v1](https://hub.docker.com/r/kodekloud/examplevotingapp_worker)
+
+to make a component accessed by another, we can't use ip address because if the pod restarts, the address will change,that's why we use services.
+
+we need to name the services properly, because the source code requires the name, in a real world environment, we would use environment variables
+1. redis (redis, ClusterIP)
+2. db (postgres, ClusterIP, required username + password)
+3. voting-app (voting app, NodePort)
+4. results-app (results app, NodePort)
+
+we start with creating pod definition files.
+
+- voting_app_pod.yaml
+- result_app_pod.yaml
+- redis_pod.yaml
+- postgres_pod.yaml
+- worker_app_pod.yaml
+- redis_service.yaml
+- postgres_service.yaml
+- voting_app_service.yaml
+- results_app_service.yaml
+  
+for the postgres pod, we need a user name and password, we could use secrets, or a vault, but that's for another time, we use hardcoded environment variables instead. as an intermediate step, we could use an environment resource instead.
+
+now that we created the files, we can start creating them on the the cluster.
+
+we assume we have a cluster, like minikube or aws, we might need to call `minikube service` to expose the app
+
+```sh
+cd voting_app_demo
+kubectl create -f voting_app_pod.yaml -f voting_app_service.yaml
+kubectl get pod, service
+#minikube service voting-service --url
+
+kubectl create -f redis_pod.yaml -f redis_service.yaml
+kubectl create -f postgres_pod.yaml -f postgres_service.yaml
+kubectl create -f worker_app_pod.yaml
+kubectl get pod, service
+
+kubectl create -f result_app_pod.yaml -f result_app_service.yaml
+kubectl get pod, service
+#minikube service result-service --url
+```
+
+deploying pods doesn't help us scale the app, and we can't update the pods without taking them down. so now we will try using a deployment instead, that we can add more replicas.
+
+- voting_app_deployment.yaml
+- redis_deployment.yaml
+- postgres_deployment.yaml
+- worker_app_deployment.yaml
+- results_app_deployment.yaml
+
+so before we use the deployments, lets remove all the previous pods and service
+```sh
+cd voting_app_demo
+kubectl get pods
+kubectl delete -f voting_app_pod.yaml -f result_app_pod.yaml -f worker_app_pod.yaml -f postgres_pod.yaml -f redis_pod.yaml
+kubectl get pods
+kubectl create -f postgres_deployment.yaml -f redis_deployment.yaml -f worker_app_deployment.yaml -f result_app_deployment.yaml -f voting_app_deployment.yaml
+
+kubectl get deployment, svc
+#minikube service result-service.yaml --url
+#minikube service voting-service.yaml --url
+
+kubectl scale deployment voting-app-deploy --replicas=3
+kubectl get deployments
+```
+
 </details>
 
 ## Kubernetes on Cloud
 
-<!-- <details> -->
+<details>
 <summary>
-
+Getting started with kubernetes on popular cloud services.
 </summary>
+
+we can host kubernetes on various platforms, we can divide them into two categories:
+
+> - SelfHosted / Turnkey Solution
+>   - you can provision VMs
+>   - you configure VMs
+>   - you use scripts to deploy the cluster
+>   - you maintain the VMs yourself
+>   - e.g., kubernetes on AWS using kops or KubeOne
+> - Hosted Solution (managed solutions)
+>   - kubernetes as a service
+>   - provider provisions VMs
+>   - provider installs kubernetes
+>   - provider maintains VMs
+>   - e.g., google container engine (GKE)
+
+### Google Kubernetes Engine (GKE)
+
+need a google cloud account
+
+<kbd>Compute</kbd> -> <kbd>Kubernetes Engine</kbd>\
+<kbd>Create Cluster</kbd>\
+clusterBasics:
+ - change name
+ - don't touch location or zone
+ - either use static or dynamic kubernetes version
+ - <kbd>node Pools</kbd>
+   - stick with defaults
+
+<kbd>Create</kbd>
+
+connect to the cloud shell with the <kbd>connect</kbd> button and take a command for the *gcloud* app to get the credentials. this shell has kubectl installed so we just need to run the given command, and we are connected.
+
+we get the files from the git repository. the files are a bit different because we use a LoadBalancer rather than a NodePort. w
+
+```sh
+git clone https://github.com/kodedloudhub/example-voting-app.git
+cd example-voting-app/
+ls
+kubectl create -f voting-app-deploy.yaml -f voting-app-service.yaml
+kubectl create -f redis-deploy.yaml -f redis-service.yaml
+kubectl create -f postgres-deploy.yaml -f postgres-service.yaml
+kubectl create -f worker-app-deploy.yaml
+kubectl create -f result-app-deploy.yaml -f result-app-service.yaml
+
+# create everything in the folder
+# kubectl create -f .
+
+kubectl get deployment, svc
+```
+
+in the google kubernetes dashboard we can see the <kbd>Services & Ingress</kbd> to get the ip addresses.
+
+### Amazon Elastic Kubernetes Service (EKS)
+
+for amazon, we need an AWS account, this is more complicated:
+
+- EKS Cluster Role
+- IAM Role for Node Group
+- VPC
+- EC2 Key Pair which can be used to SSH into the worker nodes
+- AWS CLI and credentials
+
+Step 1: create amazon eks cluster
+
+  - configure cluster
+    - cluster name
+    - kubernetes version
+    - cluster service role
+  - specify networking
+    - use default vpc
+  - configure logging
+    - nothing
+  - review and create
+    - nothing
+
+Step 2: Add node groups
+
+<kbd>Compute</kbd> tab, <kbd>Add node Group</kbd>
+  - configure Node group
+    - node group name
+    - node IAM Role
+    - default subnets
+    - ssh key pair for ssh-ing into the worker nodes
+  - set compute configuration
+    - AMI type (virtual machine image)
+    - Instance type
+    - disk size
+  - set scaling configuration
+    - use defaults
+  - review and create
+    - nothing
+    
+<kbd>Create</kbd>
+
+Step 3: configure kubectl
+
+we need aws cli configured to work with our aws account in our terminal.
+```sh
+kubectl version
+aws --version
+aws eks --region <region> update-kubeconfig --name <cluster name>
+kubectl config view
+```
+and now we can do the same as what we did in the google cloud option
+
+```sh
+git clone https://github.com/kodedloudhub/example-voting-app.git
+cd example-voting-app/
+ls
+kubectl create -f voting-app-deploy.yaml -f voting-app-service.yaml
+kubectl create -f redis-deploy.yaml -f redis-service.yaml
+kubectl create -f postgres-deploy.yaml -f postgres-service.yaml
+kubectl create -f worker-app-deploy.yaml
+kubectl create -f result-app-deploy.yaml -f result-app-service.yaml
+
+# create everything in the folder
+# kubectl create -f .
+
+kubectl get deployment, svc
+```
+
+then delete everything to stop paying amazon so much money.
+
+### Azure Kubernetes Service (AKS)
+
+we need a azure account. open AKS.
+
+<kbd>Add</kbd> and select <kbd>Add Kubernetes cluster</kbd>
+- Basics
+  - subscription
+  - resource group <kbd>create new</kbd>
+  - kubernetes cluster name
+  - region
+  - kubernetes version
+  - node size, node count
+- Node pools
+  - nothing
+- Authentication
+  - choose <kbd>Service principal</kbd>
+- Networking
+  - nothing
+- Integrations
+  - nothing
+- Tags
+  - nothing
+- Review + create
+  - nothing
+
+<kbd>Create</kbd>
+
+type the name of the resource in the searchbox, then use the cloud shell, we might be promoted to configure storage. we configure the kubectl to work with the cluster.
+
+```sh
+az aks get-credentials --resource-group <resource group name> --name <cluster name>
+kubectl get nodes
+```
+and now we can clone the repository and create the deployments.
+
+
 </details>
 
 ## Setup Multi Node Cluster Using Kubeadm
 
-<!-- <details> -->
+<details>
 <summary>
-
+Using Kubeadm to create a multi node cluster
 </summary>
+
+The kubeadm (kube admin) tool, which is used to set up a multi-node cluster.
+
+we need multiple machines (can be virtual), we need to install a container runtime on each node, like docker, and installing the kubeadm tool. then we initialize the master node. we need a special networking configuration between the machine. the last step is to join the worker nodes (machines) to the master node.
+
+the demo uses virtual box and a "Vagrantile" file which describes the nodes and network. we can see the file in the [github repository](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)
+
+we follow the instruction from the[installing kubeadm page](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)
+```sh
+vagrant status
+vagrant up
+vagrant status
+vagrant ssh kubemaster
+$ uptime
+$ logout
+vagrant ssh kubenode01
+$ logout
+vagrant ssh kubenode02
+$ cat /etc/hostname
+$ logout
+```
+now we have the nodes, and we need to configure the cluster.
+
+we need to enable/load bridged traffic, we do this on all the nodes.
+```sh
+#check this
+lsmod | grep br_netfilter
+#if nothing, then run
+sudo nodeprobe br_netfilter
+# now we see something
+lsmod | grep br_netfilter
+```
+we also need to setup kernel parameters
+```sh
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+br_netfilter
+EOF
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+# then check
+sudo sysctl --system
+```
+
+we install the container run time
+```sh
+#get privileges
+sudo -i
+
+apt-get update && apt-get install -y \
+apt-transport-https ca-certificates curl software-properties-common gnupg2
+
+# google public signing key
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+
+#Add the Kubernetes apt repository
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+#install docker
+#
+
+#set up docker daemon
+sudo mkdir /etc/docker
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+# start docker service
+sudo systemctl enable docker
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+#verify status
+systemctl status docker.service
+
+# installing kubeadm tools
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+```
+
+if we use docker, we don't need to configure cgroup drivers.
+
+now we move on to [configuring the cluster](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)
+
+we initialize the control-plane node, we can skip the first step if we have one master node. we then configure the pod network, we can use one of several options.
+
+
+now we run this on the master node (not on the worker nodes)
+```sh
+#check ip, inet
+ifconfig enp0s8
+
+kubeadm init --pod-network-cider 10.244.0.0/16 --apiserver-advertise-address=192.168.56.2
+
+```
+
+now we switch back to the regular (not sudo root) user
+```sh
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+now we use the command we got from the master (`kubeadm join`) inside the worker nodes to join them into the cluster. we can then check the status of the cluster
+`kubectl get nodes`
+
+we need to install the pod network, like weave
+```sh
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+kubectl get nodes
+```
+
+we can now start adding resources to the cluster
+
+```sh
+kubectl run nginx --image=nginx
+kubectl get pods
+```
 </details>
-
-## Extra Takeaways
-
-<!-- <details> -->
-<summary>
-Special notes to remember.
-</summary>
-</details>
-
